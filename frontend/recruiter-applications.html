@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Recruiter Applications - HireFlow</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+
+<body>
+
+
+<nav class="navbar">
+
+    <div class="logo">
+        HireFlow
+    </div>
+
+
+    <div class="nav-links">
+
+        <a href="index.html">
+            Home
+        </a>
+
+        <a href="jobs.html">
+            Jobs
+        </a>
+
+        <a href="recruiter-dashboard.html">
+            My Jobs
+        </a>
+
+    </div>
+
+</nav>
+
+
+
+<section class="dashboard-section">
+
+
+    <div class="dashboard-container">
+
+
+        <h1 id="applications-page-title">Job Applications</h1>
+
+        <p id="applications-page-subtitle" class="dashboard-subtitle">
+            View and manage applications submitted for this job.
+        </p>
+
+        <p id="applications-message"></p>
+
+        <div class="recruiter-applications-section">
+
+            <h2 id="applications-count">Applications</h2>
+
+            <div id="applications-container">
+                <p>Loading applications...</p>
+            </div>
+
+        </div>
+
+    </div>
+
+
+</section>
+
+
+
+<footer>
+
+    <p>
+        &copy; 2026 HireFlow. All rights reserved.
+    </p>
+
+</footer>
+
+
+
+<script src="session.js"></script>
+<script>
+
+
+    /* =========================================
+       LOAD APPLICATIONS
+       ========================================= */
+
+    async function loadApplications() {
+
+        const urlParams =
+            new URLSearchParams(window.location.search);
+
+        const jobId =
+            urlParams.get("jobId");
+
+        const container =
+            document.getElementById("applications-container");
+
+        const message =
+            document.getElementById("applications-message");
+
+        const title =
+            document.getElementById("applications-page-title");
+
+        const subtitle =
+            document.getElementById("applications-page-subtitle");
+
+        if (!jobId) {
+
+            message.innerText =
+                "This page must be opened from a job in the recruiter dashboard.";
+
+            container.innerHTML = "";
+            return;
+        }
+
+        container.innerHTML =
+            "<p>Loading applications...</p>";
+
+        message.innerText = "";
+
+        try {
+
+            // Load the job details so the recruiter knows which job
+            // these applications belong to.
+            const jobResponse = await authFetch(
+                `http://localhost:8080/api/jobs/${jobId}`
+            );
+
+            if (jobResponse.ok) {
+                const job = await jobResponse.json();
+                title.textContent = job.title;
+                subtitle.textContent =
+                    `${job.companyName} · ${job.location} · ${job.employmentType}`;
+            }
+
+            const response =
+                await authFetch(
+                    `http://localhost:8080/api/applications/job/${jobId}`
+                );
+
+
+            const applications =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    applications.message ||
+                    "Failed to load applications"
+                );
+            }
+
+
+            container.innerHTML = "";
+
+            const count = applications.length;
+            document.getElementById("applications-count").textContent =
+                `${count} Application${count === 1 ? "" : "s"}`;
+
+
+            if (applications.length === 0) {
+
+                container.innerHTML = `
+                <div class="application-card">
+
+                    <p>
+                        No applications found for this job.
+                    </p>
+
+                </div>
+            `;
+
+                return;
+            }
+
+
+            /*
+             * Process every application.
+             */
+            for (const application of applications) {
+
+                const card =
+                    document.createElement("div");
+
+                card.className =
+                    "application-card recruiter-application-card";
+
+
+                let actions = "";
+
+                let interview = null;
+
+
+                /*
+                 * =====================================
+                 * GET INTERVIEW INFORMATION
+                 * =====================================
+                 */
+
+                if (
+                    application.status ===
+                    "INTERVIEW_SCHEDULED"
+                ) {
+
+                    try {
+
+                        const interviewResponse =
+                            await authFetch(
+                                `http://localhost:8080/api/interviews/application/${application.id}`
+                            );
+
+
+                        if (interviewResponse.ok) {
+
+                            interview =
+                                await interviewResponse.json();
+                        }
+
+                    }
+
+                    catch (error) {
+
+                        console.error(
+                            "Unable to load interview:",
+                            error
+                        );
+
+                    }
+
+                }
+
+
+                /*
+                 * =====================================
+                 * APPLIED
+                 * =====================================
+                 */
+
+                if (
+                    application.status ===
+                    "APPLIED"
+                ) {
+
+                    actions = `
+
+                    <button
+                        type="button"
+                        class="application-action-btn"
+                        onclick="updateStatus(
+                            ${application.id},
+                            'SHORTLISTED'
+                        )"
+                    >
+                        Shortlist
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="application-reject-btn"
+                        onclick="updateStatus(
+                            ${application.id},
+                            'REJECTED'
+                        )"
+                    >
+                        Reject
+                    </button>
+
+                `;
+
+                }
+
+
+                /*
+                 * =====================================
+                 * SHORTLISTED
+                 * =====================================
+                 */
+
+                else if (
+                    application.status ===
+                    "SHORTLISTED"
+                ) {
+
+                    actions = `
+
+                    <button
+                        type="button"
+                        class="schedule-interview-btn"
+                        onclick="showInterviewForm(
+                            ${application.id}
+                        )"
+                    >
+                        Schedule Interview
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="application-reject-btn"
+                        onclick="updateStatus(
+                            ${application.id},
+                            'REJECTED'
+                        )"
+                    >
+                        Reject
+                    </button>
+
+                `;
+
+                }
+
+
+                /*
+                 * =====================================
+                 * INTERVIEW SCHEDULED
+                 * =====================================
+                 */
+
+                else if (
+                    application.status ===
+                    "INTERVIEW_SCHEDULED"
+                ) {
+
+                    if (
+                        !interview ||
+                        interview.status ===
+                        "SCHEDULED"
+                    ) {
+
+                        actions = `
+
+                        <button
+                            type="button"
+                            class="schedule-interview-btn"
+                            onclick="completeInterview(
+                                ${application.id}
+                            )"
+                        >
+                            Mark Interview Completed
+                        </button>
+
+
+                        <button
+                            type="button"
+                            class="dashboard-btn"
+                            onclick="showNotesForm(
+                                ${application.id}
+                            )"
+                        >
+                            Add Interview Notes
+                        </button>
+
+                    `;
+
+                    }
+
+
+                    else if (
+                        interview.status ===
+                        "COMPLETED"
+                    ) {
+
+                        actions = `
+
+                        <button
+                            type="button"
+                            class="application-action-btn"
+                            onclick="updateStatus(
+                                ${application.id},
+                                'SELECTED'
+                            )"
+                        >
+                            Select Candidate
+                        </button>
+
+
+                        <button
+                            type="button"
+                            class="application-reject-btn"
+                            onclick="updateStatus(
+                                ${application.id},
+                                'REJECTED'
+                            )"
+                        >
+                            Reject Candidate
+                        </button>
+
+                    `;
+
+                    }
+
+
+                    else if (
+                        interview.status ===
+                        "CANCELLED"
+                    ) {
+
+                        actions = `
+
+                        <span class="application-status">
+                            Interview Cancelled
+                        </span>
+
+                    `;
+
+                    }
+
+                }
+
+
+                /*
+                 * =====================================
+                 * SELECTED
+                 * =====================================
+                 */
+
+                else if (
+                    application.status ===
+                    "SELECTED"
+                ) {
+
+                    actions = `
+
+                    <span class="application-status">
+                        Candidate Selected
+                    </span>
+
+                `;
+
+                }
+
+
+                /*
+                 * =====================================
+                 * REJECTED
+                 * =====================================
+                 */
+
+                else if (
+                    application.status ===
+                    "REJECTED"
+                ) {
+
+                    actions = `
+
+                    <span class="application-status">
+                        Application Rejected
+                    </span>
+
+                `;
+
+                }
+
+
+                /*
+                 * =====================================
+                 * CARD
+                 * =====================================
+                 */
+
+                card.innerHTML = `
+
+                <h2>
+                    ${application.candidateName}
+                </h2>
+
+
+                <p class="application-company">
+                    ${application.jobTitle}
+                </p>
+
+
+                <p class="application-location">
+                    ${application.companyName}
+                </p>
+
+
+                <div class="recruiter-application-details">
+
+
+                    <p>
+
+                        <strong>
+                            Email:
+                        </strong>
+
+                        ${application.candidateEmail || "N/A"}
+
+                    </p>
+
+
+                    <p>
+
+                        <strong>
+                            Applied:
+                        </strong>
+
+                        ${formatDate(
+                    application.appliedAt
+                )}
+
+                    </p>
+
+
+                    <p>
+
+                        <strong>
+                            Last Updated:
+                        </strong>
+
+                        ${formatDate(
+                    application.updatedAt
+                )}
+
+                    </p>
+
+
+                    ${
+                    interview
+                        ?
+                        `
+
+                        <p>
+
+                            <strong>
+                                Interview Status:
+                            </strong>
+
+                            ${interview.status}
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                Interview Date:
+                            </strong>
+
+                            ${formatDate(
+                            interview.scheduledAt
+                        )}
+
+                        </p>
+
+
+                        ${
+                            interview.notes
+                                ?
+                                `
+
+                            <p>
+
+                                <strong>
+                                    Interview Notes:
+                                </strong>
+
+                                ${interview.notes}
+
+                            </p>
+
+                            `
+                                :
+                                ""
+                        }
+
+                        `
+                        :
+                        ""
+                }
+
+
+                </div>
+
+
+                <div class="application-info">
+
+
+                    <span
+                        class="application-status"
+                        id="status-${application.id}"
+                    >
+                        ${application.status}
+                    </span>
+
+
+                    <div class="application-actions">
+
+                        ${actions}
+
+                    </div>
+
+
+                </div>
+
+
+                <div
+                    id="interview-form-${application.id}"
+                    class="interview-form"
+                    style="display: none;"
+                >
+                </div>
+
+            `;
+
+
+                container.appendChild(card);
+
+            }
+
+        }
+
+
+        catch (error) {
+
+            console.error(error);
+
+
+            message.innerText =
+                error.message ||
+                "Unable to load applications.";
+
+
+            container.innerHTML = "";
+
+        }
+
+    }
+
+
+
+    /* =========================================
+       UPDATE APPLICATION STATUS
+       ========================================= */
+
+    async function updateStatus(
+        applicationId,
+        status
+    ) {
+
+
+        try {
+
+
+            const response = await authFetch(
+
+                `http://localhost:8080/api/applications/${applicationId}/status?status=${status}`,
+
+                {
+                    method: "PATCH"
+                }
+
+            );
+
+
+
+            const result =
+                await response.json();
+
+
+
+            if (!response.ok) {
+
+
+                throw new Error(
+
+                    result.message ||
+                    "Failed to update application status"
+
+                );
+
+            }
+
+
+
+            if (status === "SELECTED") {
+
+                alert(
+                    "Candidate selected successfully."
+                );
+
+            }
+
+
+            else if (status === "REJECTED") {
+
+                alert(
+                    "Candidate rejected."
+                );
+
+            }
+
+
+
+            loadApplications();
+
+
+        }
+
+
+        catch (error) {
+
+
+            console.error(error);
+
+
+            alert(
+
+                error.message ||
+                "Failed to update application status."
+
+            );
+
+        }
+
+    }
+
+
+
+    /* =========================================
+       SHOW INTERVIEW FORM
+       ========================================= */
+
+    function showInterviewForm(
+        applicationId
+    ) {
+
+
+        const formContainer =
+            document.getElementById(
+                `interview-form-${applicationId}`
+            );
+
+
+
+        if (!formContainer) {
+
+            return;
+
+        }
+
+
+
+        formContainer.style.display =
+            "block";
+
+
+
+        formContainer.innerHTML = `
+
+
+        <h3>
+            Schedule Interview
+        </h3>
+
+
+
+        <div class="form-group">
+
+            <label>
+                Interview Date & Time
+            </label>
+
+
+            <input
+                type="datetime-local"
+                id="interview-time-${applicationId}"
+            >
+
+        </div>
+
+
+
+        <div class="form-group">
+
+            <label>
+                Interview Mode
+            </label>
+
+
+            <select
+                id="interview-mode-${applicationId}"
+                onchange="toggleInterviewModeFields(${applicationId})"
+            >
+
+                <option value="">
+                    Select mode
+                </option>
+
+
+                <option value="Online">
+                    Online
+                </option>
+
+
+                <option value="Offline">
+                    Offline
+                </option>
+
+            </select>
+
+        </div>
+
+
+
+        <div class="form-group" id="meeting-link-group-${applicationId}">
+
+            <label>
+                Meeting Link
+            </label>
+
+            <input
+                type="url"
+                id="meeting-link-${applicationId}"
+                placeholder="https://meet.google.com/..."
+            >
+
+        </div>
+
+        <div class="form-group" id="location-group-${applicationId}" style="display: none;">
+
+            <label>
+                Interview Location
+            </label>
+
+            <input
+                type="text"
+                id="interview-location-${applicationId}"
+                placeholder="Office address or meeting room"
+            >
+
+        </div>
+
+
+
+        <button
+            type="button"
+            class="dashboard-btn"
+            onclick="scheduleInterview(
+                ${applicationId}
+            )"
+        >
+
+            Schedule Interview
+
+        </button>
+
+
+    `;
+
+    }
+
+
+
+    function toggleInterviewModeFields(applicationId) {
+
+        const mode = document.getElementById(`interview-mode-${applicationId}`).value;
+        const meetingLinkGroup = document.getElementById(`meeting-link-group-${applicationId}`);
+        const locationGroup = document.getElementById(`location-group-${applicationId}`);
+
+        if (mode === "Online") {
+            meetingLinkGroup.style.display = "block";
+            locationGroup.style.display = "none";
+        } else if (mode === "Offline") {
+            meetingLinkGroup.style.display = "none";
+            locationGroup.style.display = "block";
+        } else {
+            meetingLinkGroup.style.display = "block";
+            locationGroup.style.display = "none";
+        }
+    }
+
+
+    /* =========================================
+       SCHEDULE INTERVIEW
+       ========================================= */
+
+    async function scheduleInterview(
+        applicationId
+    ) {
+
+
+        const scheduledAt =
+            document.getElementById(
+                `interview-time-${applicationId}`
+            ).value;
+
+
+
+        const mode =
+            document.getElementById(
+                `interview-mode-${applicationId}`
+            ).value;
+
+
+
+        const meetingLink =
+            document.getElementById(
+                `meeting-link-${applicationId}`
+            ).value.trim();
+
+        const location =
+            document.getElementById(
+                `interview-location-${applicationId}`
+            ).value.trim();
+
+
+
+        if (!scheduledAt) {
+
+
+            alert(
+                "Please select interview date and time."
+            );
+
+
+            return;
+
+        }
+
+
+
+        if (!mode) {
+
+            alert(
+                "Please select interview mode."
+            );
+
+            return;
+
+        }
+
+        if (mode === "Online" && !meetingLink) {
+
+            alert(
+                "Please enter the meeting link for an online interview."
+            );
+
+            return;
+
+        }
+
+        if (mode === "Offline" && !location) {
+
+            alert(
+                "Please enter the interview location for an offline interview."
+            );
+
+            return;
+
+        }
+
+
+
+        const request = {
+
+
+            applicationId:
+            applicationId,
+
+
+            scheduledAt:
+            scheduledAt,
+
+
+            mode:
+            mode,
+
+
+            meetingLink:
+                mode === "Online" ? meetingLink : null,
+
+            location:
+                mode === "Offline" ? location : null
+
+        };
+
+
+
+        try {
+
+
+            const response = await authFetch(
+
+                "http://localhost:8080/api/interviews",
+
+                {
+
+                    method: "POST",
+
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+
+                    body:
+                        JSON.stringify(request)
+
+                }
+
+            );
+
+
+
+            const result =
+                await response.json();
+
+
+
+            if (!response.ok) {
+
+
+                throw new Error(
+
+                    result.message ||
+                    "Failed to schedule interview"
+
+                );
+
+            }
+
+
+
+            alert(
+                "Interview scheduled successfully."
+            );
+
+
+
+            loadApplications();
+
+
+        }
+
+
+        catch (error) {
+
+
+            console.error(error);
+
+
+            alert(
+
+                error.message ||
+                "Failed to schedule interview."
+
+            );
+
+        }
+
+    }
+
+
+
+    /* =========================================
+       COMPLETE INTERVIEW
+       ========================================= */
+
+    async function completeInterview(
+        applicationId
+    ) {
+
+
+        try {
+
+
+            /*
+             * Find interview using application ID.
+             */
+
+            const interviewResponse =
+                await authFetch(
+
+                    `http://localhost:8080/api/interviews/application/${applicationId}`
+
+                );
+
+
+
+            const interview =
+                await interviewResponse.json();
+
+
+
+            if (!interviewResponse.ok) {
+
+
+                throw new Error(
+
+                    interview.message ||
+                    "Interview not found"
+
+                );
+
+            }
+
+
+
+            /*
+             * SCHEDULED → COMPLETED
+             */
+
+            const response =
+                await authFetch(
+
+                    `http://localhost:8080/api/interviews/${interview.id}/status?status=COMPLETED`,
+
+                    {
+                        method: "PATCH"
+                    }
+
+                );
+
+
+
+            const result =
+                await response.json();
+
+
+
+            if (!response.ok) {
+
+
+                throw new Error(
+
+                    result.message ||
+                    "Failed to complete interview"
+
+                );
+
+            }
+
+
+
+            alert(
+                "Interview marked as completed."
+            );
+
+
+
+            loadApplications();
+
+
+        }
+
+
+        catch (error) {
+
+
+            console.error(error);
+
+
+            alert(
+
+                error.message ||
+                "Failed to complete interview."
+
+            );
+
+        }
+
+    }
+
+
+
+    /* =========================================
+       SHOW INTERVIEW NOTES FORM
+       ========================================= */
+
+    function showNotesForm(
+        applicationId
+    ) {
+
+
+        const formContainer =
+            document.getElementById(
+                `interview-form-${applicationId}`
+            );
+
+
+
+        if (!formContainer) {
+
+            return;
+
+        }
+
+
+
+        formContainer.style.display =
+            "block";
+
+
+
+        formContainer.innerHTML = `
+
+
+        <h3>
+            Interview Notes
+        </h3>
+
+
+
+        <div class="form-group">
+
+            <label>
+                Interview Feedback
+            </label>
+
+
+            <textarea
+                id="interview-notes-${applicationId}"
+                rows="5"
+                placeholder="Enter interview feedback..."
+            ></textarea>
+
+        </div>
+
+
+
+        <button
+            type="button"
+            class="dashboard-btn"
+            onclick="saveInterviewNotes(
+                ${applicationId}
+            )"
+        >
+
+            Save Notes
+
+        </button>
+
+
+    `;
+
+    }
+
+
+
+    /* =========================================
+       SAVE INTERVIEW NOTES
+       ========================================= */
+
+    async function saveInterviewNotes(
+        applicationId
+    ) {
+
+
+        const notesElement =
+            document.getElementById(
+                `interview-notes-${applicationId}`
+            );
+
+
+
+        if (!notesElement) {
+
+            return;
+
+        }
+
+
+
+        const notes =
+            notesElement.value;
+
+
+
+        if (!notes.trim()) {
+
+
+            alert(
+                "Please enter interview notes."
+            );
+
+
+            return;
+
+        }
+
+
+
+        try {
+
+
+            /*
+             * Find interview.
+             */
+
+            const interviewResponse =
+                await authFetch(
+
+                    `http://localhost:8080/api/interviews/application/${applicationId}`
+
+                );
+
+
+
+            const interview =
+                await interviewResponse.json();
+
+
+
+            if (!interviewResponse.ok) {
+
+
+                throw new Error(
+
+                    interview.message ||
+                    "Interview not found"
+
+                );
+
+            }
+
+
+
+            /*
+             * Save notes.
+             */
+
+            const response =
+                await authFetch(
+
+                    `http://localhost:8080/api/interviews/${interview.id}/notes?notes=${encodeURIComponent(notes)}`,
+
+                    {
+                        method: "PATCH"
+                    }
+
+                );
+
+
+
+            const result =
+                await response.json();
+
+
+
+            if (!response.ok) {
+
+
+                throw new Error(
+
+                    result.message ||
+                    "Failed to save interview notes"
+
+                );
+
+            }
+
+
+
+            alert(
+                "Interview notes saved successfully."
+            );
+
+
+
+            loadApplications();
+
+
+        }
+
+
+        catch (error) {
+
+
+            console.error(error);
+
+
+            alert(
+
+                error.message ||
+                "Failed to save interview notes."
+
+            );
+
+        }
+
+    }
+
+
+
+    /* =========================================
+       FORMAT DATE
+       ========================================= */
+
+    function formatDate(
+        dateTime
+    ) {
+
+
+        if (!dateTime) {
+
+            return "N/A";
+
+        }
+
+
+
+        return new Date(dateTime)
+            .toLocaleString();
+
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        loadApplications();
+    });
+
+
+
+</script>
+
+
+
+</body>
+
+</html>

@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recruiter Dashboard - HireFlow</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+    <div class="logo">HireFlow</div>
+
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="jobs.html">Jobs</a>
+        <a href="applications.html">Applications</a>
+        <a href="recruiter-dashboard.html">Recruiter Dashboard</a>
+    </div>
+        <a href="login.html">Login</a>
+</nav>
+
+
+<!-- Recruiter Dashboard -->
+<section class="dashboard-section">
+
+    <div class="dashboard-container">
+
+        <h1>Recruiter Dashboard</h1>
+
+        <p id="current-recruiter" class="dashboard-subtitle"></p>
+
+        <p class="dashboard-subtitle">
+            Manage your job postings and applications.
+        </p>
+
+
+        <!-- Create Job Button -->
+        <div class="dashboard-actions">
+
+            <button class="dashboard-btn" onclick="showCreateJobForm()">
+                Post a New Job
+            </button>
+
+        </div>
+
+
+        <!-- Create Job Form -->
+        <div id="create-job-section" class="create-job-section">
+
+            <h2>Post a New Job</h2>
+
+            <form id="create-job-form" onsubmit="createJob(event)">
+
+                <div class="form-group">
+                    <label for="job-title">Job Title</label>
+
+                    <input
+                            type="text"
+                            id="job-title"
+                            placeholder="e.g. Java Backend Developer"
+                            required>
+                </div>
+
+
+                <div class="form-group">
+                    <label for="job-description">Description</label>
+
+                    <textarea
+                            id="job-description"
+                            placeholder="Enter job description"
+                            required></textarea>
+                </div>
+
+
+                <div class="form-group">
+                    <label for="company-name">Company Name</label>
+
+                    <input
+                            type="text"
+                            id="company-name"
+                            placeholder="Enter company name"
+                            required>
+                </div>
+
+
+                <div class="form-group">
+                    <label for="job-location">Location</label>
+
+                    <input
+                            type="text"
+                            id="job-location"
+                            placeholder="e.g. Pune, Maharashtra"
+                            required>
+                </div>
+
+
+                <div class="form-group">
+                    <label for="employment-type">Employment Type</label>
+
+                    <select id="employment-type" required>
+
+                        <option value="">Select employment type</option>
+                        <option value="Full Time">Full Time</option>
+                        <option value="Part Time">Part Time</option>
+                        <option value="Internship">Internship</option>
+                        <option value="Contract">Contract</option>
+
+                    </select>
+                </div>
+
+
+                <div class="form-group">
+                    <label for="salary">Salary</label>
+
+                    <input
+                            type="text"
+                            id="salary"
+                            placeholder="e.g. ₹5 - ₹8 LPA">
+                </div>
+
+
+                <div class="form-group">
+                    <label for="skills">Required Skills</label>
+
+                    <input
+                            type="text"
+                            id="skills"
+                            placeholder="e.g. Java, Spring Boot, MySQL"
+                            required>
+                </div>
+
+
+                <div class="form-actions">
+
+                    <button type="submit" class="dashboard-btn">
+                        Create Job
+                    </button>
+
+                    <button
+                            type="button"
+                            class="cancel-btn"
+                            onclick="hideCreateJobForm()">
+                        Cancel
+                    </button>
+
+                </div>
+
+            </form>
+
+            <p id="create-job-message"></p>
+
+        </div>
+
+
+        <!-- My Job Postings -->
+        <div class="recruiter-jobs-section" id="job-postings">
+
+            <h2>My Job Postings</h2>
+
+            <div id="recruiter-jobs-container">
+
+                <p>Loading your job postings...</p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- Footer -->
+<footer>
+    <p>© 2026 HireFlow. All rights reserved.</p>
+</footer>
+
+
+<script src="session.js"></script>
+<script>
+
+    /*
+     * Show Create Job Form
+     */
+    function showCreateJobForm() {
+
+        const section = document.getElementById("create-job-section");
+
+        section.style.display = "block";
+
+        window.scrollTo({
+            top: section.offsetTop - 20,
+            behavior: "smooth"
+        });
+    }
+
+
+    /*
+     * Hide Create Job Form
+     */
+    function hideCreateJobForm() {
+
+        document.getElementById("create-job-section").style.display = "none";
+
+    }
+
+
+    /*
+     * Create New Job
+     */
+    function createJob(event) {
+
+        event.preventDefault();
+
+        const currentUser = getCurrentUser();
+
+        if (currentUser?.role !== "RECRUITER") {
+
+            alert("Please log in as a recruiter first.");
+
+            return;
+        }
+
+
+        const title =
+            document.getElementById("job-title").value;
+
+        const description =
+            document.getElementById("job-description").value;
+
+        const companyName =
+            document.getElementById("company-name").value;
+
+        const location =
+            document.getElementById("job-location").value;
+
+        const employmentType =
+            document.getElementById("employment-type").value;
+
+        const salary =
+            document.getElementById("salary").value;
+
+        const skills =
+            document.getElementById("skills").value;
+
+        const message =
+            document.getElementById("create-job-message");
+
+
+        authFetch(
+            "http://localhost:8080/api/jobs",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+
+                    title: title,
+                    description: description,
+                    companyName: companyName,
+                    location: location,
+                    employmentType: employmentType,
+                    salary: salary,
+                    skills: skills
+
+                })
+            }
+        )
+
+            .then(response => {
+
+                if (!response.ok) {
+
+                    return response.text().then(errorMessage => {
+
+                        throw new Error(errorMessage);
+
+                    });
+
+                }
+
+                return response.json();
+
+            })
+
+            .then(job => {
+
+                message.textContent =
+                    "Job posted successfully!";
+
+                message.style.color = "green";
+
+
+                document.getElementById("create-job-form").reset();
+
+
+                loadRecruiterJobs();
+
+            })
+
+            .catch(error => {
+
+                console.error("Error creating job:", error);
+
+                message.textContent =
+                    "Failed to create job: " + error.message;
+
+                message.style.color = "red";
+
+            });
+
+    }
+
+
+    /*
+     * Load Recruiter's Jobs
+     */
+    function loadRecruiterJobs() {
+
+        const container =
+            document.getElementById("recruiter-jobs-container");
+
+        const currentUser = getCurrentUser();
+
+        if (currentUser?.role !== "RECRUITER") {
+
+            container.innerHTML = "<p>Please log in as a recruiter.</p>";
+
+            return;
+        }
+
+
+        container.innerHTML =
+            "<p>Loading your job postings...</p>";
+
+
+        authFetch(
+            "http://localhost:8080/api/jobs/recruiter/me"
+        )
+
+            .then(response => {
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "Failed to load recruiter jobs"
+                    );
+
+                }
+
+                return response.json();
+
+            })
+
+            .then(jobs => {
+
+                if (!jobs || jobs.length === 0) {
+
+                    container.innerHTML =
+                        "<p>No job postings available.</p>";
+
+                    return;
+                }
+
+
+                container.innerHTML = "";
+
+
+                jobs.forEach(job => {
+
+                    const jobCard =
+                        document.createElement("div");
+
+                    jobCard.className = "job-card";
+
+
+                    let statusSection = "";
+
+
+                    if (job.status === "OPEN") {
+
+                        statusSection = `
+                            <span class="job-status-open">
+                                OPEN
+                            </span>
+
+                            <button
+                                class="close-job-btn"
+                                onclick="closeJob(${job.id})">
+                                Close Job
+                            </button>
+                        `;
+
+                    } else {
+
+                        statusSection = `
+                            <span class="job-status-closed">
+                                CLOSED
+                            </span>
+                        `;
+
+                    }
+
+
+                    jobCard.innerHTML = `
+
+                        <h3>${job.title}</h3>
+
+                        <p>
+                            <strong>Company:</strong>
+                            ${job.companyName}
+                        </p>
+
+                        <p>
+                            <strong>Location:</strong>
+                            ${job.location}
+                        </p>
+
+                        <p>
+                            <strong>Employment Type:</strong>
+                            ${job.employmentType}
+                        </p>
+
+                        <p>
+                            <strong>Salary:</strong>
+                            ${job.salary || "Not specified"}
+                        </p>
+
+                        <p>
+                            <strong>Skills:</strong>
+                            ${job.skills}
+                        </p>
+
+                        <p class="job-application-count" id="application-count-${job.id}">
+                            <strong>Applications:</strong> Loading...
+                        </p>
+
+                        <div class="job-status-row">
+    <strong>Status:</strong>
+    ${statusSection}
+</div>
+
+
+<div class="job-card-actions">
+
+                            <a
+                                href="job-details.html?id=${job.id}"
+                                class="view-job-btn">
+                                View Job
+                            </a>
+
+                            <a
+                                href="recruiter-applications.html?jobId=${job.id}"
+                                class="view-applications-btn">
+                                View Applications
+                            </a>
+
+                        </div>
+
+                    `;
+
+
+                    container.appendChild(jobCard);
+
+                    loadApplicationCount(job.id);
+
+                });
+
+            })
+
+            .catch(error => {
+
+                console.error(
+                    "Error loading recruiter jobs:",
+                    error
+                );
+
+                container.innerHTML = `
+                    <p style="color:red;">
+                        Failed to load job postings.
+                        Please make sure the Spring Boot backend is running.
+                    </p>
+                `;
+
+            });
+
+    }
+
+
+    /*
+     * Load application count for a recruiter job
+     */
+    async function loadApplicationCount(jobId) {
+
+        const countElement =
+            document.getElementById(`application-count-${jobId}`);
+
+        if (!countElement) {
+            return;
+        }
+
+        try {
+
+            const response = await authFetch(
+                `http://localhost:8080/api/applications/job/${jobId}`
+            );
+
+            if (!response.ok) {
+                throw new Error("Unable to load applications");
+            }
+
+            const applications = await response.json();
+
+            countElement.innerHTML =
+                `<strong>Applications:</strong> ${applications.length}`;
+
+        } catch (error) {
+
+            console.error(`Unable to load applications for job ${jobId}:`, error);
+
+            countElement.innerHTML =
+                `<strong>Applications:</strong> —`;
+        }
+    }
+
+
+    /*
+     * Close Job
+     */
+    function closeJob(jobId) {
+
+        const currentUser = getCurrentUser();
+
+        if (currentUser?.role !== "RECRUITER") {
+
+            alert("Please log in as a recruiter first.");
+
+            return;
+        }
+
+
+        const confirmed = confirm(
+            "Are you sure you want to close this job? Candidates will no longer be able to apply."
+        );
+
+
+        if (!confirmed) {
+
+            return;
+
+        }
+
+
+        authFetch(
+            `http://localhost:8080/api/jobs/${jobId}/close`,
+            {
+                method: "PATCH"
+            }
+        )
+
+            .then(response => {
+
+                if (!response.ok) {
+
+                    return response.text().then(message => {
+
+                        throw new Error(message);
+
+                    });
+
+                }
+
+                return response.json();
+
+            })
+
+            .then(updatedJob => {
+
+                alert("Job closed successfully.");
+
+                loadRecruiterJobs();
+
+            })
+
+            .catch(error => {
+
+                console.error(
+                    "Error closing job:",
+                    error
+                );
+
+                alert(
+                    "Failed to close job: " +
+                    error.message
+                );
+
+            });
+
+    }
+
+
+    /*
+     * IMPORTANT:
+     * Load jobs as soon as the page opens.
+     */
+    document.addEventListener(
+        "DOMContentLoaded",
+        function () {
+
+            const user = getCurrentUser();
+
+            if (user && user.role === "RECRUITER") {
+                document.getElementById("current-recruiter").textContent =
+                    `Logged in as ${user.name} · ${user.email}`;
+            }
+
+            loadRecruiterJobs();
+
+        }
+    );
+
+</script>
+
+</body>
+
+</html>

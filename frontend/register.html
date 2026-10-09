@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>HireFlow - Register</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header class="navbar">
+
+    <div class="logo">HireFlow</div>
+
+    <nav class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="jobs.html">Jobs</a>
+        <a href="applications.html">Applications</a>
+        <a href="register.html">Register</a>
+        <a href="login.html">Login</a>
+</nav>
+
+</header>
+
+
+<main>
+
+    <section class="register-section">
+
+        <div class="register-card">
+
+            <h1>Create Candidate Account</h1>
+
+            <p class="register-subtitle">
+                Create an account to apply for jobs and track your applications.
+            </p>
+
+            <form id="register-form">
+
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+
+                    <input
+                            type="text"
+                            id="name"
+                            placeholder="Enter your full name"
+                            required
+                    >
+                </div>
+
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+
+                    <input
+                            type="email"
+                            id="email"
+                            placeholder="Enter your email"
+                            required
+                    >
+                </div>
+
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+
+                    <input
+                            type="password"
+                            id="password"
+                            placeholder="Enter your password"
+                            required
+                    >
+                </div>
+
+
+                <button type="submit" class="register-btn">
+                    Create Account
+                </button>
+
+            </form>
+
+
+            <p id="register-message"></p>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<footer>
+    <p>&copy; 2026 HireFlow. All rights reserved.</p>
+</footer>
+
+
+<script src="session.js"></script>
+<script src="script.js"></script>
+
+</body>
+
+</html>

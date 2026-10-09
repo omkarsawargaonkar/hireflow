@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>My Applications - HireFlow</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================
+     NAVBAR
+     ========================================= -->
+
+<nav class="navbar">
+
+    <div class="logo">
+        HireFlow
+    </div>
+
+
+    <div class="nav-links">
+
+        <a href="index.html">
+            Home
+        </a>
+
+        <a href="jobs.html">
+            Jobs
+        </a>
+
+        <a href="applications.html">
+            Applications
+        </a>
+
+        <a href="recruiter-dashboard.html">
+            Recruiter Dashboard
+        </a>
+
+    </div>
+
+        <a href="login.html">Login</a>
+</nav>
+
+
+
+<!-- =========================================
+     PAGE HEADER
+     ========================================= -->
+
+<section class="applications-header">
+
+    <h1>
+        My Applications
+    </h1>
+
+
+    <p>
+        Track the status of your job applications in one place.
+    </p>
+
+</section>
+
+
+
+<!-- =========================================
+     APPLICATIONS
+     ========================================= -->
+
+<section class="applications-section">
+
+    <div id="applications-container">
+
+        <p>
+            Loading your applications...
+        </p>
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================================
+     FOOTER
+     ========================================= -->
+
+<footer>
+
+    <p>
+        &copy; 2026 HireFlow. All rights reserved.
+    </p>
+
+</footer>
+
+
+
+<script src="session.js"></script>
+<script>
+
+
+    /* =========================================
+       LOAD APPLICATIONS
+       ========================================= */
+
+    const applicationsContainer =
+        document.getElementById(
+            "applications-container"
+        );
+
+
+
+    loadApplications();
+
+
+
+    async function loadApplications() {
+
+
+        const currentUser = getCurrentUser();
+
+
+
+        if (currentUser?.role !== "CANDIDATE") {
+
+            applicationsContainer.innerHTML = `
+
+            <div class="application-card">
+
+                <p>
+                    Please register as a candidate
+                    to view your applications.
+                </p>
+
+            </div>
+
+        `;
+
+            return;
+
+        }
+
+
+
+        try {
+
+
+            const response =
+                await authFetch(
+
+                    `http://localhost:8080/api/applications/candidate/me`
+
+                );
+
+
+
+            const applications =
+                await response.json();
+
+
+
+            if (!response.ok) {
+
+                throw new Error(
+
+                    applications.message ||
+                    "Failed to load applications"
+
+                );
+
+            }
+
+
+
+            displayApplications(
+                applications
+            );
+
+
+        }
+
+
+        catch (error) {
+
+
+            console.error(error);
+
+
+            applicationsContainer.innerHTML = `
+
+            <div class="application-card">
+
+                <p>
+                    Unable to load your applications.
+                </p>
+
+            </div>
+
+        `;
+
+        }
+
+    }
+
+
+
+    /* =========================================
+       DISPLAY APPLICATIONS
+       ========================================= */
+
+    function displayApplications(
+        applications
+    ) {
+
+
+        applicationsContainer.innerHTML =
+            "";
+
+
+
+        if (
+            applications.length ===
+            0
+        ) {
+
+
+            applicationsContainer.innerHTML = `
+
+            <div class="application-card">
+
+                <p>
+                    You haven't applied for
+                    any jobs yet.
+                </p>
+
+            </div>
+
+        `;
+
+            return;
+
+        }
+
+
+
+        applications.forEach(
+            application => {
+
+                const card =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                card.className =
+                    "application-card";
+
+
+
+                const appliedDate =
+                    application.appliedAt
+                        ?
+                        new Date(
+                            application.appliedAt
+                        ).toLocaleDateString()
+                        :
+                        "N/A";
+
+
+
+                /*
+                 * Status-specific content.
+                 */
+
+                let statusMessage = "";
+
+                let interviewSection = "";
+
+
+
+                /* =====================================
+                   SELECTED
+                   ===================================== */
+
+                if (
+                    application.status ===
+                    "SELECTED"
+                ) {
+
+
+                    statusMessage = `
+
+                    <div class="final-status selected-status">
+
+                        <h3>
+                            🎉 Congratulations!
+                        </h3>
+
+                        <p>
+                            You have been selected
+                            for this position.
+                        </p>
+
+                    </div>
+
+                `;
+
+                }
+
+
+
+                /* =====================================
+                   REJECTED
+                   ===================================== */
+
+                else if (
+                    application.status ===
+                    "REJECTED"
+                ) {
+
+
+                    statusMessage = `
+
+                    <div class="final-status rejected-status">
+
+                        <h3>
+                            Application Update
+                        </h3>
+
+                        <p>
+                            Your application was
+                            not selected for this
+                            position.
+                        </p>
+
+                    </div>
+
+                `;
+
+                }
+
+
+
+                /* =====================================
+                   INTERVIEW SCHEDULED
+                   ===================================== */
+
+                else if (
+                    application.status ===
+                    "INTERVIEW_SCHEDULED"
+                ) {
+
+
+                    interviewSection = `
+
+                    <div class="candidate-interview-section">
+
+                        <button
+                            type="button"
+                            class="view-interview-btn"
+                            onclick="viewInterview(
+                                ${application.id}
+                            )"
+                        >
+
+                            View Interview
+
+                        </button>
+
+
+                        <div
+                            id="interview-details-${application.id}"
+                            class="interview-details"
+                        >
+                        </div>
+
+                    </div>
+
+                `;
+
+                }
+
+
+
+                /* =====================================
+                   SHORTLISTED
+                   ===================================== */
+
+                else if (
+                    application.status ===
+                    "SHORTLISTED"
+                ) {
+
+
+                    statusMessage = `
+
+                    <div class="status-message">
+
+                        <p>
+                            Your application has
+                            been shortlisted.
+                        </p>
+
+                    </div>
+
+                `;
+
+                }
+
+
+
+                /* =====================================
+                   APPLIED
+                   ===================================== */
+
+                else if (
+                    application.status ===
+                    "APPLIED"
+                ) {
+
+
+                    statusMessage = `
+
+                    <div class="status-message">
+
+                        <p>
+                            Your application has
+                            been submitted successfully.
+                        </p>
+
+                    </div>
+
+                `;
+
+                }
+
+
+
+                /* =====================================
+                   CARD
+                   ===================================== */
+
+                card.innerHTML = `
+
+
+                <h2>
+                    ${application.jobTitle}
+                </h2>
+
+
+                <p class="application-company">
+
+                    ${application.companyName}
+
+                </p>
+
+
+                <p class="application-location">
+
+                    Application ID:
+                    ${application.id}
+
+                </p>
+
+
+
+                <div class="application-info">
+
+
+                    <span
+                        class="application-status"
+                    >
+
+                        ${application.status}
+
+                    </span>
+
+
+
+                    <span
+                        class="application-date"
+                    >
+
+                        Applied:
+                        ${appliedDate}
+
+                    </span>
+
+
+                </div>
+
+
+
+                ${statusMessage}
+
+
+                ${interviewSection}
+
+
+            `;
+
+
+
+                applicationsContainer.appendChild(
+                    card
+                );
+
+            }
+        );
+
+    }
+
+
+
+    /* =========================================
+       VIEW INTERVIEW
+       ========================================= */
+
+    async function viewInterview(
+        applicationId
+    ) {
+
+
+        const container =
+            document.getElementById(
+                `interview-details-${applicationId}`
+            );
+
+
+
+        if (!container) {
+
+            return;
+
+        }
+
+
+
+        container.innerHTML = `
+
+        <p>
+            Loading interview details...
+        </p>
+
+    `;
+
+
+
+        try {
+
+
+            const response =
+                await authFetch(
+
+                    `http://localhost:8080/api/interviews/application/${applicationId}`
+
+                );
+
+
+
+            const interview =
+                await response.json();
+
+
+
+            if (!response.ok) {
+
+
+                throw new Error(
+
+                    interview.message ||
+                    "Interview details not found"
+
+                );
+
+            }
+
+
+
+            const interviewDate =
+                formatInterviewDate(
+                    interview.scheduledAt
+                );
+
+
+
+            let interviewAccess =
+                "";
+
+            if (
+                interview.mode === "Online" &&
+                interview.meetingLink
+            ) {
+
+                interviewAccess = `
+
+                <p>
+
+                    <strong>
+                        Meeting Link:
+                    </strong>
+
+                    <a
+                        href="${interview.meetingLink}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+
+                        Join Interview
+
+                    </a>
+
+                </p>
+
+            `;
+
+            } else if (
+                interview.mode === "Offline" &&
+                interview.location
+            ) {
+
+                interviewAccess = `
+
+                <p>
+
+                    <strong>
+                        Location:
+                    </strong>
+
+                    ${interview.location}
+
+                </p>
+
+                `;
+
+            }
+
+
+            let notesSection =
+                "";
+
+
+
+            if (
+                interview.notes
+            ) {
+
+
+                notesSection = `
+
+                <p>
+
+                    <strong>
+                        Interview Notes:
+                    </strong>
+
+                    ${interview.notes}
+
+                </p>
+
+            `;
+
+            }
+
+
+
+            container.innerHTML = `
+
+            <div class="interview-details-card">
+
+
+                <h3>
+                    Interview Details
+                </h3>
+
+
+                <p>
+
+                    <strong>
+                        Job:
+                    </strong>
+
+                    ${interview.jobTitle}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Date & Time:
+                    </strong>
+
+                    ${interviewDate}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Mode:
+                    </strong>
+
+                    ${interview.mode}
+
+                </p>
+
+
+                <p>
+
+                    <strong>
+                        Status:
+                    </strong>
+
+                    ${interview.status}
+
+                </p>
+
+
+                ${interviewAccess}
+
+
+                ${notesSection}
+
+
+            </div>
+
+        `;
+
+
+        }
+
+
+        catch (error) {
+
+
+            console.error(error);
+
+
+            container.innerHTML = `
+
+            <div class="interview-details-card">
+
+                <p>
+                    ${error.message ||
+            "Unable to load interview details."}
+                </p>
+
+            </div>
+
+        `;
+
+        }
+
+    }
+
+
+
+    /* =========================================
+       FORMAT INTERVIEW DATE
+       ========================================= */
+
+    function formatInterviewDate(
+        dateTime
+    ) {
+
+
+        if (!dateTime) {
+
+            return "N/A";
+
+        }
+
+
+
+        return new Date(
+            dateTime
+        ).toLocaleString();
+
+    }
+
+
+</script>
+
+
+
+</body>
+
+</html>

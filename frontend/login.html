@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - HireFlow</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">HireFlow</div>
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="jobs.html">Jobs</a>
+        <a href="register.html">Register</a>
+    </div>
+</nav>
+
+<main>
+    <section class="register-section">
+        <div class="register-card">
+            <h1>Welcome back</h1>
+            <p class="register-subtitle">Login to continue to your HireFlow account.</p>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" placeholder="Enter your email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter your password" required>
+                </div>
+
+                <button type="submit" class="register-btn">Login</button>
+            </form>
+
+            <p id="login-message"></p>
+            <p class="auth-switch">New to HireFlow? <a href="register.html">Create a candidate account</a></p>
+            <p class="auth-switch"><a href="recruiter-register.html">Register as a recruiter</a></p>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <p>&copy; 2026 HireFlow. All rights reserved.</p>
+</footer>
+
+<script src="auth.js"></script>
+</body>
+</html>
